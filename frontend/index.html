@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Returns Optimizer</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        colors: {
+          "primary": "#4648d4",
+          "primary-container": "#6063ee",
+          "primary-fixed": "#e1e0ff",
+          "primary-fixed-dim": "#c0c1ff",
+          "on-primary": "#ffffff",
+          "on-primary-fixed": "#07006c",
+          "secondary": "#006c49",
+          "secondary-container": "#6cf8bb",
+          "on-secondary": "#ffffff",
+          "surface": "#faf8ff",
+          "surface-container-lowest": "#ffffff",
+          "surface-container-low": "#f2f3ff",
+          "surface-container": "#eaedff",
+          "surface-container-high": "#e2e7ff",
+          "surface-variant": "#dae2fd",
+          "on-surface": "#131b2e",
+          "on-surface-variant": "#464554",
+          "outline": "#767586",
+          "outline-variant": "#c7c4d7",
+          "border-subtle": "#E2E8F0",
+          "text-secondary": "#64748B",
+          "sidebar-bg": "#0F172A",
+          "background": "#faf8ff",
+          "on-background": "#131b2e",
+          "warning": "#F59E0B",
+          "danger": "#EF4444",
+          "error": "#ba1a1a",
+          "surface-main": "#F9FAFB",
+        }
+      }
+    }
+  }
+</script>
+<style>
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    vertical-align: middle;
+  }
+  .ai-shimmer {
+    background: linear-gradient(90deg, transparent, rgba(139,92,246,0.1), transparent);
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite linear;
+  }
+  @keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
+  .loading-pulse { animation: pulse 2s cubic-bezier(0.4,0,0.6,1) infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+  .tab-section { display: none; }
+  .tab-section.active { display: block; }
+  .nav-link.active-nav {
+    background: rgba(70,72,212,0.12);
+    color: #e1e0ff;
+    border-left: 4px solid #4648d4;
+  }
+  .nav-link { border-left: 4px solid transparent; }
+  .status-approved { background:#dcfce7; color:#166534; }
+  .status-manual_review { background:#fef9c3; color:#854d0e; }
+  .status-rejected { background:#fee2e2; color:#991b1b; }
+  .fade-in { animation: fadeIn 0.35s ease; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+</style>
+</head>
+<body class="bg-background font-sans text-on-background overflow-x-hidden">
+
+<!-- Sidebar -->
+<aside class="fixed h-full w-64 left-0 top-0 hidden md:flex flex-col py-6 z-50 bg-sidebar-bg">
+  <div class="px-6 mb-8">
+    <h1 class="text-lg font-bold text-white mb-1">Returns Optimizer</h1>
+    <p class="text-xs text-slate-400">AI-Powered Logistics</p>
+  </div>
+  <nav class="flex-1 space-y-1 px-2">
+    <a class="nav-link active-nav text-slate-200 px-4 py-3 flex items-center gap-3 rounded-r-lg transition-all cursor-pointer" data-tab="dashboard">
+      <span class="material-symbols-outlined text-xl">dashboard</span>
+      <span class="text-sm font-medium">Dashboard</span>
+    </a>
+    <a class="nav-link text-slate-400 hover:text-slate-200 px-4 py-3 flex items-center gap-3 hover:bg-white/5 rounded-r-lg transition-all cursor-pointer" data-tab="returns">
+      <span class="material-symbols-outlined text-xl">assignment_return</span>
+      <span class="text-sm font-medium">Returns</span>
+    </a>
+    <a class="nav-link text-slate-400 hover:text-slate-200 px-4 py-3 flex items-center gap-3 hover:bg-white/5 rounded-r-lg transition-all cursor-pointer" data-tab="submit">
+      <span class="material-symbols-outlined text-xl">add_box</span>
+      <span class="text-sm font-medium">Submit Return</span>
+    </a>
+    <a class="nav-link text-slate-400 hover:text-slate-200 px-4 py-3 flex items-center gap-3 hover:bg-white/5 rounded-r-lg transition-all cursor-pointer" data-tab="analytics">
+      <span class="material-symbols-outlined text-xl">analytics</span>
+      <span class="text-sm font-medium">Analytics</span>
+    </a>
+  </nav>
+  <div class="px-2 space-y-1">
+    <a class="nav-link text-slate-400 hover:text-slate-200 px-4 py-3 flex items-center gap-3 hover:bg-white/5 rounded-r-lg transition-all cursor-pointer" data-tab="settings">
+      <span class="material-symbols-outlined text-xl">settings</span>
+      <span class="text-sm font-medium">Settings</span>
+    </a>
+  </div>
+</aside>
+
+<!-- Top Bar -->
+<header class="sticky top-0 z-40 w-full bg-surface shadow-sm flex justify-between items-center px-6 h-16 md:ml-64 border-b border-border-subtle">
+  <div class="flex items-center gap-4 flex-1">
+    <span class="md:hidden material-symbols-outlined text-on-surface cursor-pointer" id="mobileMenuBtn">menu</span>
+    <div class="relative w-full max-w-md hidden sm:block">
+      <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
+      <input class="w-full pl-10 pr-4 py-2 bg-surface-container-low border-none rounded-lg text-sm focus:ring-2 focus:ring-primary/20 outline-none" placeholder="Search orders, customers..." type="text"/>
+    </div>
+  </div>
+  <div class="flex items-center gap-2">
+    <div class="hover:bg-surface-container-low rounded-full p-2 cursor-pointer">
+      <span class="material-symbols-outlined text-on-surface-variant">notifications</span>
+    </div>
+    <div class="ml-2 flex items-center gap-3 border-l pl-4 border-border-subtle">
+      <div class="text-right hidden sm:block">
+        <p class="text-sm font-bold text-on-surface" id="profileName">Returns Optimizer</p>
+        <p class="text-[10px] text-text-secondary uppercase tracking-wider" id="profileRole">Connecting...</p>
+      </div>
+      <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm">A</div>
+    </div>
+  </div>
+</header>
+
+<!-- Main -->
+<main class="md:ml-64 p-4 md:p-6 min-h-[calc(100vh-64px)]">
+
+  <!-- ═══════════════ DASHBOARD TAB ═══════════════ -->
+  <section class="tab-section active fade-in" id="tab-dashboard">
+    <div class="mb-6">
+      <h2 class="text-2xl font-bold text-on-background mb-1">Dashboard</h2>
+      <p class="text-text-secondary text-sm">Live overview of your returns pipeline.</p>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div class="bg-surface-container-lowest border border-border-subtle rounded-xl p-5 shadow-sm">
+        <p class="text-xs font-semibold uppercase text-text-secondary mb-1">Total Returns</p>
+        <p class="text-3xl font-bold text-on-background" id="kpi-total">—</p>
+        <p class="text-xs text-text-secondary mt-1">All time</p>
+      </div>
+      <div class="bg-surface-container-lowest border border-border-subtle rounded-xl p-5 shadow-sm">
+        <p class="text-xs font-semibold uppercase text-text-secondary mb-1">Approved</p>
+        <p class="text-3xl font-bold text-green-600" id="kpi-approved">—</p>
+        <p class="text-xs text-text-secondary mt-1">Auto-approved</p>
+      </div>
+      <div class="bg-surface-container-lowest border border-border-subtle rounded-xl p-5 shadow-sm">
+        <p class="text-xs font-semibold uppercase text-text-secondary mb-1">Manual Review</p>
+        <p class="text-3xl font-bold text-yellow-600" id="kpi-manual">—</p>
+        <p class="text-xs text-text-secondary mt-1">Needs attention</p>
+      </div>
+      <div class="bg-surface-container-lowest border border-border-subtle rounded-xl p-5 shadow-sm">
+        <p class="text-xs font-semibold uppercase text-text-secondary mb-1">Approval Rate</p>
+        <p class="text-3xl font-bold text-primary" id="kpi-rate">—</p>
+        <p class="text-xs text-text-secondary mt-1">Of all returns</p>
+      </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="bg-surface-container-lowest border border-border-subtle rounded-xl p-5 shadow-sm">
+        <h3 class="text-sm font-semibold text-on-background mb-4">Returns by Status</h3>
+        <div class="flex justify-center" style="height:220px">
+          <canvas id="pieChart"></canvas>
+        </div>
+      </div>
+      <div class="bg-surface-container-lowest border border-border-subtle rounded-xl p-5 shadow-sm">
+        <h3 class="text-sm font-semibold text-on-background mb-4">Volume Breakdown</h3>
+        <div style="height:220px">
+          <canvas id="barChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ RETURNS TAB ═══════════════ -->
+  <section class="tab-section fade-in" id="tab-returns">
+    <div class="mb-6 flex items-center justify-between">
+      <div>
+        <h2 class="text-2xl font-bold text-on-background mb-1">All Returns</h2>
+        <p class="text-text-secondary text-sm">All submitted return requests.</p>
+      </div>
+      <button onclick="loadReturns()" class="flex items-center gap-2 px-4 py-2 bg-surface-container border border-border-subtle rounded-lg text-sm text-on-surface hover:bg-surface-container-high transition-colors">
+        <span class="material-symbols-outlined text-base">refresh</span> Refresh
+      </button>
+    </div>
+    <div class="bg-surface-container-lowest border border-border-subtle rounded-xl shadow-sm overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-surface-container-low border-b border-border-subtle">
+            <tr>
+              <th class="text-left px-4 py-3 text-xs font-semibold uppercase text-text-secondary">Order ID</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold uppercase text-text-secondary">Customer</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold uppercase text-text-secondary">Product</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold uppercase text-text-secondary">Reason</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold uppercase text-text-secondary">Status</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold uppercase text-text-secondary">Refund</th>
+            </tr>
+          </thead>
+          <tbody id="returnsTableBody">
+            <tr><td colspan="6" class="text-center py-10 text-text-secondary">Loading returns...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ SUBMIT TAB ═══════════════ -->
+  <section class="tab-section fade-in" id="tab-submit">
+    <div class="mb-6">
+      <h2 class="text-2xl font-bold text-on-background mb-1">Submit New Return Request</h2>
+      <p class="text-text-secondary text-sm">Initiate a return with AI-driven risk assessment.</p>
+    </div>
+    <div class="relative max-w-3xl">
+      <div class="bg-surface-container-lowest border border-border-subtle rounded-xl shadow-sm p-6 md:p-8" id="returnFormCard">
+        <form class="space-y-6" id="submitReturnForm">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="space-y-2">
+              <label class="text-xs font-semibold uppercase text-text-secondary" for="orderId">Order ID</label>
+              <input class="w-full px-4 py-3 rounded-lg border border-slate-200 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none text-sm" id="orderId" placeholder="e.g. ORD-001" required type="text"/>
+            </div>
+            <div class="space-y-2">
+              <label class="text-xs font-semibold uppercase text-text-secondary" for="customerName">Customer Name</label>
+              <input class="w-full px-4 py-3 rounded-lg border border-slate-200 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none text-sm" id="customerName" placeholder="Full name" required type="text"/>
+            </div>
+          </div>
+          <div class="space-y-2">
+            <label class="text-xs font-semibold uppercase text-text-secondary" for="productName">Product Name</label>
+            <input class="w-full px-4 py-3 rounded-lg border border-slate-200 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none text-sm" id="productName" placeholder="Enter product name" required type="text"/>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="space-y-2">
+              <label class="text-xs font-semibold uppercase text-text-secondary" for="reason">Return Reason</label>
+              <input class="w-full px-4 py-3 rounded-lg border border-slate-200 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none text-sm" id="reason" placeholder="e.g. Product is defective" required type="text"/>
+            </div>
+            <div class="space-y-2">
+              <label class="text-xs font-semibold uppercase text-text-secondary" for="condition">Condition</label>
+              <select class="w-full px-4 py-3 rounded-lg border border-slate-200 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none bg-white text-sm" id="condition" required>
+                <option value="" disabled selected>Select condition</option>
+                <option value="new">New / Unopened</option>
+                <option value="good">Good</option>
+                <option value="damaged">Damaged</option>
+                <option value="defective">Defective</option>
+              </select>
+            </div>
+          </div>
+          <div class="pt-2">
+            <button class="w-full bg-primary text-white font-bold py-4 rounded-lg shadow hover:bg-primary-container active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-sm" type="submit">
+              <span class="material-symbols-outlined text-base">send</span>
+              Submit Return Request
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Result card (hidden by default) -->
+      <div class="hidden mt-6 bg-surface-container-lowest border border-border-subtle rounded-xl p-6 shadow-sm" id="resultCard">
+        <div class="flex items-start gap-4">
+          <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" id="resultIcon"></div>
+          <div>
+            <h4 class="font-bold text-on-background text-base" id="resultTitle"></h4>
+            <p class="text-text-secondary text-sm mt-1" id="resultMessage"></p>
+            <div class="mt-3 flex gap-4 text-sm">
+              <span class="font-semibold text-on-background">Status: <span id="resultStatus" class="font-normal"></span></span>
+              <span class="font-semibold text-on-background">Refund: <span id="resultRefund" class="font-normal"></span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ ANALYTICS TAB ═══════════════ -->
+  <section class="tab-section fade-in" id="tab-analytics">
+    <div class="mb-6">
+      <h2 class="text-2xl font-bold text-on-background mb-1">Analytics</h2>
+      <p class="text-text-secondary text-sm">Detailed breakdown of your returns data.</p>
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      <div class="bg-surface-container-lowest border border-border-subtle rounded-xl p-5 shadow-sm">
+        <h3 class="text-sm font-semibold text-on-background mb-4">Status Distribution</h3>
+        <div class="space-y-4" id="analyticsBreakdown">
+          <p class="text-text-secondary text-sm">Loading...</p>
+        </div>
+      </div>
+      <div class="bg-surface-container-lowest border border-border-subtle rounded-xl p-5 shadow-sm">
+        <h3 class="text-sm font-semibold text-on-background mb-2">Summary Stats</h3>
+        <div class="space-y-3 mt-4" id="analyticsSummary">
+          <p class="text-text-secondary text-sm">Loading...</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SETTINGS TAB -->
+  <section class="tab-section fade-in" id="tab-settings">
+    <div class="mb-6">
+      <h2 class="text-2xl font-bold text-on-background mb-1">Settings</h2>
+      <p class="text-text-secondary text-sm">Configuration and account options.</p>
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="bg-surface-container-lowest border border-border-subtle rounded-xl p-5 shadow-sm">
+        <h3 class="text-sm font-semibold text-on-background mb-3">Connection</h3>
+        <div class="space-y-3 text-sm">
+          <div class="flex justify-between gap-4">
+            <span class="text-text-secondary">Backend</span>
+            <span class="font-medium text-on-surface" id="settingsBackend">Loading...</span>
+          </div>
+          <div class="flex justify-between gap-4">
+            <span class="text-text-secondary">Database</span>
+            <span class="font-medium text-on-surface" id="settingsDatabase">Loading...</span>
+          </div>
+          <div class="flex justify-between gap-4">
+            <span class="text-text-secondary">Mode</span>
+            <span class="font-medium text-on-surface" id="settingsMode">Loading...</span>
+          </div>
+        </div>
+      </div>
+      <div class="bg-surface-container-lowest border border-border-subtle rounded-xl p-5 shadow-sm">
+        <h3 class="text-sm font-semibold text-on-background mb-3">Notes</h3>
+        <p class="text-sm text-text-secondary leading-6" id="settingsNotes">
+          This page is a static dashboard shell. The visible values come from the backend API
+          and any records already stored in the database.
+        </p>
+        <div class="mt-4 space-y-2" id="integrationsList"></div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- Toast -->
+<div class="fixed bottom-8 right-8 z-[100] transform translate-y-24 opacity-0 transition-all duration-500" id="successToast">
+  <div class="bg-green-600 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-4">
+    <span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1">check_circle</span>
+    <div>
+      <p class="font-bold text-sm">Return Submitted</p>
+      <p class="text-xs opacity-90" id="toastMsg">Processing complete.</p>
+    </div>
+    <button class="ml-2 opacity-60 hover:opacity-100" onclick="hideToast()">
+      <span class="material-symbols-outlined text-base">close</span>
+    </button>
+  </div>
+</div>
+
+<script>
+  // ── Config ──────────────────────────────────────────────
+  const API = window.location.origin && window.location.origin.startsWith('http')
+    ? window.location.origin
+    : 'http://127.0.0.1:8000';
+
+  // ── Tab switching ────────────────────────────────────────
+  const navLinks = document.querySelectorAll('.nav-link[data-tab]');
+  const sections = document.querySelectorAll('.tab-section');
+
+  async function loadMeta() {
+    try {
+      const res = await fetch(`${API}/api/meta`);
+      const meta = await res.json();
+
+      document.getElementById('profileName').textContent = meta.app_name || 'Returns Optimizer';
+      document.getElementById('profileRole').textContent = `${String(meta.app_env || 'development').toUpperCase()} MODE`;
+      document.getElementById('settingsBackend').textContent = API;
+      document.getElementById('settingsDatabase').textContent = `${meta.database?.provider || 'unknown'}${meta.database?.configured ? ' (configured)' : ' (not configured)'}`;
+      document.getElementById('settingsMode').textContent = meta.debug === true || meta.debug === 'True' ? 'Debug enabled' : 'Production';
+
+      const integrations = meta.integrations || {};
+      document.getElementById('integrationsList').innerHTML = [
+        ['Groq', integrations.groq],
+        ['Shopify', integrations.shopify],
+        ['Stripe', integrations.stripe],
+        ['Resend', integrations.resend],
+        ['Twilio', integrations.twilio],
+      ].map(([name, enabled]) => `
+        <div class="flex items-center justify-between rounded-lg border border-border-subtle bg-surface-container-low px-3 py-2 text-sm">
+          <span class="text-on-surface">${name}</span>
+          <span class="font-medium ${enabled ? 'text-green-600' : 'text-danger'}">${enabled ? 'Connected' : 'Missing'}</span>
+        </div>
+      `).join('');
+    } catch (err) {
+      document.getElementById('profileName').textContent = 'Returns Optimizer';
+      document.getElementById('profileRole').textContent = 'LOCAL MODE';
+      document.getElementById('settingsBackend').textContent = API;
+      document.getElementById('settingsDatabase').textContent = 'Unavailable';
+      document.getElementById('settingsMode').textContent = 'Unknown';
+      document.getElementById('integrationsList').innerHTML = '<p class="text-sm text-danger">Could not load backend meta information.</p>';
+    }
+  }
+
+  function showTab(tabId) {
+    sections.forEach(s => { s.classList.remove('active'); s.classList.remove('fade-in'); });
+    navLinks.forEach(l => l.classList.remove('active-nav', 'text-slate-200'));
+
+    const section = document.getElementById('tab-' + tabId);
+    if (section) {
+      section.classList.add('active');
+      // Force reflow for animation
+      void section.offsetWidth;
+      section.classList.add('fade-in');
+    }
+
+    navLinks.forEach(l => {
+      if (l.dataset.tab === tabId) {
+        l.classList.add('active-nav', 'text-slate-200');
+      } else {
+        l.classList.add('text-slate-400');
+      }
+    });
+
+    // Load data for the tab
+    if (tabId === 'dashboard') loadDashboard();
+    if (tabId === 'returns') loadReturns();
+    if (tabId === 'analytics') loadAnalytics();
+  }
+
+  navLinks.forEach(link => {
+    link.addEventListener('click', () => showTab(link.dataset.tab));
+  });
+
+  // ── Dashboard ────────────────────────────────────────────
+  let pieChartInstance = null;
+  let barChartInstance = null;
+
+  async function loadDashboard() {
+    try {
+      const res = await fetch(`${API}/api/analytics/summary`);
+      const data = await res.json();
+
+      document.getElementById('kpi-total').textContent = data.total ?? '—';
+      document.getElementById('kpi-approved').textContent = data.approved ?? '—';
+      document.getElementById('kpi-manual').textContent = data.manual_review ?? '—';
+      document.getElementById('kpi-rate').textContent = data.approval_rate != null ? data.approval_rate + '%' : '—';
+
+      renderCharts(data);
+    } catch(e) {
+      console.error('Dashboard load error:', e);
+      document.getElementById('kpi-total').textContent = 'ERR';
+    }
+  }
+
+  function renderCharts(data) {
+    const approved = data.approved || 0;
+    const manual = data.manual_review || 0;
+    const rejected = data.rejected || 0;
+
+    // Pie chart
+    const pieCtx = document.getElementById('pieChart').getContext('2d');
+    if (pieChartInstance) pieChartInstance.destroy();
+    pieChartInstance = new Chart(pieCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Approved', 'Manual Review', 'Rejected'],
+        datasets: [{
+          data: [approved, manual, rejected],
+          backgroundColor: ['#16a34a', '#ca8a04', '#dc2626'],
+          borderWidth: 2,
+          borderColor: '#fff'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { font: { size: 12 } } } }
+      }
+    });
+
+    // Bar chart
+    const barCtx = document.getElementById('barChart').getContext('2d');
+    if (barChartInstance) barChartInstance.destroy();
+    barChartInstance = new Chart(barCtx, {
+      type: 'bar',
+      data: {
+        labels: ['Approved', 'Manual Review', 'Rejected'],
+        datasets: [{
+          label: 'Returns',
+          data: [approved, manual, rejected],
+          backgroundColor: ['#16a34a', '#ca8a04', '#dc2626'],
+          borderRadius: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+      }
+    });
+  }
+
+  // ── Returns Table ─────────────────────────────────────────
+  async function loadReturns() {
+    const tbody = document.getElementById('returnsTableBody');
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-10 text-text-secondary">Loading...</td></tr>';
+    try {
+      const res = await fetch(`${API}/api/returns/all`);
+      const data = await res.json();
+      const rows = Array.isArray(data) ? data : (data.returns || []);
+
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-10 text-text-secondary">No returns found.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = rows.map(r => `
+        <tr class="border-b border-border-subtle hover:bg-surface-container-low transition-colors">
+          <td class="px-4 py-3 font-mono text-xs text-on-surface">${r.order_id || '—'}</td>
+          <td class="px-4 py-3 text-sm text-on-surface">${r.customer_name || '—'}</td>
+          <td class="px-4 py-3 text-sm text-on-surface">${r.product_name || '—'}</td>
+          <td class="px-4 py-3 text-sm text-text-secondary">${r.reason || '—'}</td>
+          <td class="px-4 py-3">
+            <span class="px-2 py-1 rounded-full text-xs font-semibold status-${r.status || 'manual_review'}">
+              ${r.status || 'unknown'}
+            </span>
+          </td>
+          <td class="px-4 py-3 text-sm font-semibold text-on-surface">${r.refund_amount != null ? '$' + r.refund_amount : '—'}</td>
+        </tr>
+      `).join('');
+    } catch(e) {
+      tbody.innerHTML = `<tr><td colspan="6" class="text-center py-10 text-danger text-sm">Error loading returns. Is the backend running at ${API}?</td></tr>`;
+    }
+  }
+
+  // ── Submit Form ───────────────────────────────────────────
+  document.getElementById('submitReturnForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const btn = this.querySelector('button[type=submit]');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="material-symbols-outlined text-base loading-pulse">smart_toy</span> Processing...';
+
+    const body = {
+      order_id: document.getElementById('orderId').value,
+      customer_name: document.getElementById('customerName').value,
+      product_name: document.getElementById('productName').value,
+      reason: document.getElementById('reason').value,
+      condition: document.getElementById('condition').value,
+    };
+
+    try {
+      const res = await fetch(`${API}/api/returns/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+
+      const resultCard = document.getElementById('resultCard');
+      resultCard.classList.remove('hidden');
+
+      const statusColors = { approved: 'bg-green-100 text-green-700', manual_review: 'bg-yellow-100 text-yellow-700', rejected: 'bg-red-100 text-red-700' };
+      const status = data.status || data.agent_decision || 'unknown';
+      const approved = status === 'approved';
+
+      document.getElementById('resultIcon').innerHTML = approved
+        ? '<span class="material-symbols-outlined text-green-600 text-2xl" style="font-variation-settings:\'FILL\' 1">check_circle</span>'
+        : '<span class="material-symbols-outlined text-yellow-600 text-2xl">pending</span>';
+      document.getElementById('resultTitle').textContent = approved ? 'Return Approved!' : 'Under Review';
+      document.getElementById('resultMessage').textContent = data.customer_message || 'Your return has been processed.';
+      document.getElementById('resultStatus').textContent = status;
+      document.getElementById('resultRefund').textContent = data.refund_amount != null ? '$' + data.refund_amount : 'TBD';
+
+      document.getElementById('toastMsg').textContent = `Status: ${status}`;
+      showToast();
+      this.reset();
+    } catch(err) {
+      alert('Error submitting return. Check that the backend is running at ' + API);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<span class="material-symbols-outlined text-base">send</span> Submit Return Request';
+    }
+  });
+
+  // ── Analytics Tab ─────────────────────────────────────────
+  async function loadAnalytics() {
+    try {
+      const res = await fetch(`${API}/api/analytics/summary`);
+      const data = await res.json();
+
+      const total = data.total || 0;
+      const items = [
+        { label: 'Approved', value: data.approved || 0, color: 'bg-green-500' },
+        { label: 'Manual Review', value: data.manual_review || 0, color: 'bg-yellow-400' },
+        { label: 'Rejected', value: data.rejected || 0, color: 'bg-red-500' },
+      ];
+
+      document.getElementById('analyticsBreakdown').innerHTML = items.map(item => {
+        const pct = total > 0 ? Math.round((item.value / total) * 100) : 0;
+        return `
+          <div>
+            <div class="flex justify-between text-sm mb-1">
+              <span class="font-medium text-on-surface">${item.label}</span>
+              <span class="text-text-secondary">${item.value} (${pct}%)</span>
+            </div>
+            <div class="h-2 bg-surface-container rounded-full overflow-hidden">
+              <div class="h-full ${item.color} rounded-full transition-all duration-700" style="width:${pct}%"></div>
+            </div>
+          </div>`;
+      }).join('');
+
+      document.getElementById('analyticsSummary').innerHTML = `
+        <div class="flex justify-between py-3 border-b border-border-subtle">
+          <span class="text-sm text-text-secondary">Total Returns</span>
+          <span class="font-bold text-on-surface">${data.total}</span>
+        </div>
+        <div class="flex justify-between py-3 border-b border-border-subtle">
+          <span class="text-sm text-text-secondary">Approval Rate</span>
+          <span class="font-bold text-green-600">${data.approval_rate}%</span>
+        </div>
+        <div class="flex justify-between py-3 border-b border-border-subtle">
+          <span class="text-sm text-text-secondary">Pending Manual Review</span>
+          <span class="font-bold text-yellow-600">${data.manual_review}</span>
+        </div>
+        <div class="flex justify-between py-3">
+          <span class="text-sm text-text-secondary">Rejected</span>
+          <span class="font-bold text-red-600">${data.rejected}</span>
+        </div>`;
+    } catch(e) {
+      document.getElementById('analyticsBreakdown').innerHTML = `<p class="text-danger text-sm">Error loading analytics.</p>`;
+    }
+  }
+
+  // ── Toast ─────────────────────────────────────────────────
+  function showToast() {
+    const t = document.getElementById('successToast');
+    t.classList.remove('translate-y-24', 'opacity-0');
+    t.classList.add('translate-y-0', 'opacity-100');
+    setTimeout(hideToast, 5000);
+  }
+  function hideToast() {
+    const t = document.getElementById('successToast');
+    t.classList.add('translate-y-24', 'opacity-0');
+    t.classList.remove('translate-y-0', 'opacity-100');
+  }
+
+  // ── Init ──────────────────────────────────────────────────
+  loadMeta();
+  showTab('dashboard');
+</script>
+</body>
+</html>

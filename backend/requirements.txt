@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+crewai
+sqlalchemy
+psycopg2-binary
+python-dotenv
+resend
+twilio
+stripe
+groq
+pydantic
